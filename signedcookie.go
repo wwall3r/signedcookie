@@ -55,13 +55,13 @@ func New(secrets ...string) SignedCookie {
 	}
 }
 
-func (sc *SignedCookie) GetValues(req *http.Request, name string) (CookieValues, error) {
+func (sc *SignedCookie) GetValues(req *http.Request, writer http.ResponseWriter, name string) (CookieValues, error) {
 	cookie, err := req.Cookie(name)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, secret := range sc.secrets {
+	for i, secret := range sc.secrets {
 		value, err := verifySignedMessage(cookie.Value, secret)
 		if err != nil {
 			continue
@@ -71,6 +71,10 @@ func (sc *SignedCookie) GetValues(req *http.Request, name string) (CookieValues,
 		err = json.Unmarshal(value, &values)
 		if err != nil {
 			return nil, err
+		}
+
+		if i > 0 {
+			sc.SetValues(writer, name, values)
 		}
 
 		return values, nil

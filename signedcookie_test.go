@@ -16,7 +16,9 @@ func TestGetValuesMainSecret(t *testing.T) {
 		Value: signMessage([]byte(`{"foo":"bar"}`), secrets[0]),
 	})
 
-	values, err := sc.GetValues(req, "test")
+	writer := httptest.NewRecorder()
+
+	values, err := sc.GetValues(req, writer, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,6 +26,11 @@ func TestGetValuesMainSecret(t *testing.T) {
 	if values["foo"] != "bar" {
 		t.Errorf("Expected foo to be bar, got %s", values["foo"])
 	}
+
+	if len(writer.Header().Get("Set-Cookie")) != 0 {
+		t.Errorf("Expected no cookie to be set")
+	}
+
 }
 
 func TestGetValuesSecondSecret(t *testing.T) {
@@ -36,7 +43,27 @@ func TestGetValuesSecondSecret(t *testing.T) {
 		Value: signMessage([]byte(`{"foo":"bar"}`), secrets[1]),
 	})
 
-	values, err := sc.GetValues(req, "test")
+	writer := httptest.NewRecorder()
+
+	values, err := sc.GetValues(req, writer, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if values["foo"] != "bar" {
+		t.Errorf("Expected foo to be bar, got %s", values["foo"])
+	}
+
+	// expect the cookie to be saved with the new secret
+	sc = New(secrets[0])
+	request := &http.Request{
+		Header: http.Header{
+			"Cookie": []string{writer.Header().Get("Set-Cookie")},
+		},
+	}
+
+	writer = httptest.NewRecorder()
+	values, err = sc.GetValues(request, writer, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +94,8 @@ func TestSetValues(t *testing.T) {
 		},
 	}
 
-	result, err := sc.GetValues(request, "test")
+	writer = httptest.NewRecorder()
+	result, err := sc.GetValues(request, writer, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,8 +106,6 @@ func TestSetValues(t *testing.T) {
 }
 
 // TODO:
-// - test to check that a cookie with an older secret is saved with the new secret,
-//   which will probably require sending the response writer to GetValues
 // - test for CookieOptions
 // - test expected errors on no secrets
 // - test expected errors on invalid digest type
