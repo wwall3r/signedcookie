@@ -126,8 +126,10 @@ func verifySignedMessage(signedMessage, secret string) ([]byte, error) {
 		return nil, fmt.Errorf("Unsupported digest type: %s", digestStr)
 	}
 
+	text := digestStr + "." + string(payload)
+
 	challenge := hmac.New(sha256.New, []byte(secret))
-	challenge.Write(payload)
+	challenge.Write([]byte(text))
 
 	if !hmac.Equal(challenge.Sum(nil), signature) {
 		return nil, fmt.Errorf("Invalid signature")
@@ -138,8 +140,9 @@ func verifySignedMessage(signedMessage, secret string) ([]byte, error) {
 
 func signMessage(message []byte, secret string) string {
 	digestType := "HS256"
+	text := digestType + "." + string(message)
 	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write(message)
+	mac.Write([]byte(text))
 	signature := mac.Sum(nil)
 
 	return fmt.Sprintf("%s.%s.%s",
