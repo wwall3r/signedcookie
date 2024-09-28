@@ -13,7 +13,7 @@ func TestGetValuesMainSecret(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.AddCookie(&http.Cookie{
 		Name:  "test",
-		Value: signMessage([]byte(`{"foo":"bar"}`), secrets[0]),
+		Value: signMessage([]byte(`{"foo":"bar", "answer":42}`), secrets[0]),
 	})
 
 	writer := httptest.NewRecorder()
@@ -25,6 +25,10 @@ func TestGetValuesMainSecret(t *testing.T) {
 
 	if values["foo"] != "bar" {
 		t.Errorf("Expected foo to be bar, got %s", values["foo"])
+	}
+
+	if values["answer"] != 42.0 {
+		t.Errorf("Expected answer to be 42, got %d", values["answer"])
 	}
 
 	if len(writer.Header().Get("Set-Cookie")) != 0 {
@@ -160,7 +164,6 @@ func TestSetCookieOptions(t *testing.T) {
 }
 
 // TODO:
-// - test for CookieOptions
 // - test expected errors on no secrets
 // - test expected errors on invalid digest type
 // - test expected errors on invalid signature

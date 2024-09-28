@@ -17,7 +17,7 @@ import (
 	"strings"
 )
 
-type CookieValues = map[string]string
+type CookieValues = map[string]interface{}
 
 type CookieOptions struct {
 	MaxAge   int
