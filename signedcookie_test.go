@@ -105,6 +105,60 @@ func TestSetValues(t *testing.T) {
 	}
 }
 
+func TestSetCookieOptions(t *testing.T) {
+	secrets := []string{"secret1", "secret2"}
+	sc := New(secrets...)
+
+	sc.CookieOptions = CookieOptions{
+		MaxAge:   3600,
+		Domain:   "example.com",
+		Path:     "/path",
+		HttpOnly: false,
+		Secure:   false,
+		SameSite: http.SameSiteStrictMode,
+	}
+
+	expected := CookieValues{
+		"foo": "bar",
+	}
+
+	writer := httptest.NewRecorder()
+	err := sc.SetValues(writer, "test", expected)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cookie, err := http.ParseSetCookie(writer.Header().Get("Set-Cookie"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cookie.MaxAge != 3600 {
+		t.Errorf("Expected MaxAge to be 3600, got %d", cookie.MaxAge)
+	}
+
+	if cookie.Domain != "example.com" {
+		t.Errorf("Expected Domain to be example.com, got %s", cookie.Domain)
+	}
+
+	if cookie.Path != "/path" {
+		t.Errorf("Expected Path to be /path, got %s", cookie.Path)
+	}
+
+	if cookie.HttpOnly != false {
+		t.Errorf("Expected HttpOnly to be false, got %t", cookie.HttpOnly)
+	}
+
+	if cookie.Secure != false {
+		t.Errorf("Expected Secure to be false, got %t", cookie.Secure)
+	}
+
+	if cookie.SameSite != http.SameSiteStrictMode {
+		t.Errorf("Expected SameSite to be http.SameSiteStrictMode, got %v", cookie.SameSite)
+	}
+}
+
 // TODO:
 // - test for CookieOptions
 // - test expected errors on no secrets

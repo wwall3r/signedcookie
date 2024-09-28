@@ -25,6 +25,7 @@ type CookieOptions struct {
 	Path     string
 	HttpOnly bool
 	Secure   bool
+	SameSite http.SameSite
 }
 
 type SignedCookie struct {
@@ -38,6 +39,7 @@ var defaultCookieOptions = CookieOptions{
 	Path:     "/",
 	HttpOnly: true,
 	Secure:   true,
+	SameSite: http.SameSiteLaxMode,
 }
 
 // Returns a new SignedCookie with the given secrets. The first secret should be the
@@ -51,6 +53,7 @@ func New(secrets ...string) SignedCookie {
 			Path:     defaultCookieOptions.Path,
 			HttpOnly: defaultCookieOptions.HttpOnly,
 			Secure:   defaultCookieOptions.Secure,
+			SameSite: defaultCookieOptions.SameSite,
 		},
 	}
 }
@@ -97,6 +100,7 @@ func (sc *SignedCookie) SetValues(writer http.ResponseWriter, name string, value
 		Path:     sc.CookieOptions.Path,
 		HttpOnly: sc.CookieOptions.HttpOnly,
 		Secure:   sc.CookieOptions.Secure,
+		SameSite: sc.CookieOptions.SameSite,
 	}
 
 	http.SetCookie(writer, cookie)
