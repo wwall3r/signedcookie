@@ -163,6 +163,27 @@ func TestSetCookieOptions(t *testing.T) {
 	}
 }
 
+func TestCookieMofifiers(t *testing.T) {
+	secrets := []string{"secret1", "secret2"}
+	sc := New(secrets...)
+
+	writer := httptest.NewRecorder()
+	err := sc.SetValues(writer, "test", CookieValues{
+		"foo": "bar",
+	}, func(cookie *http.Cookie) {
+		cookie.MaxAge = 3600
+	})
+
+	cookie, err := http.ParseSetCookie(writer.Header().Get("Set-Cookie"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cookie.MaxAge != 3600 {
+		t.Errorf("Expected MaxAge to be 3600, got %d", cookie.MaxAge)
+	}
+}
+
 // TODO:
 // - test expected errors on no secrets
 // - test expected errors on invalid digest type

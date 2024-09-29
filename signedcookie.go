@@ -33,6 +33,8 @@ type SignedCookie struct {
 	CookieOptions CookieOptions
 }
 
+type CookieModifier func(cookie *http.Cookie)
+
 var defaultCookieOptions = CookieOptions{
 	MaxAge:   86400,
 	Domain:   "",
@@ -58,10 +60,12 @@ func New(secrets ...string) SignedCookie {
 	}
 }
 
-func (sc *SignedCookie) GetValues(req *http.Request, writer http.ResponseWriter, name string) (CookieValues, error) {
+func (sc *SignedCookie) GetValues(req *http.Request, writer http.ResponseWriter, name string, modifiers ...CookieModifier) (CookieValues, error) {
+	values := make(CookieValues)
 	cookie, err := req.Cookie(name)
 	if err != nil {
-		return nil, err
+		// no cookie found, so return empty values
+		return values, nil
 	}
 
 	for i, secret := range sc.secrets {
@@ -70,23 +74,22 @@ func (sc *SignedCookie) GetValues(req *http.Request, writer http.ResponseWriter,
 			continue
 		}
 
-		values := make(CookieValues)
 		err = json.Unmarshal(value, &values)
 		if err != nil {
-			return nil, err
+			return values, err
 		}
 
 		if i > 0 {
-			sc.SetValues(writer, name, values)
+			sc.SetValues(writer, name, values, modifiers...)
 		}
 
 		return values, nil
 	}
 
-	return nil, fmt.Errorf("No secret could verify the cookie")
+	return values, fmt.Errorf("No secret could verify the cookie")
 }
 
-func (sc *SignedCookie) SetValues(writer http.ResponseWriter, name string, values CookieValues) error {
+func (sc *SignedCookie) SetValues(writer http.ResponseWriter, name string, values CookieValues, modifiers ...CookieModifier) error {
 	payload, err := json.Marshal(values)
 	if err != nil {
 		return err
@@ -103,9 +106,21 @@ func (sc *SignedCookie) SetValues(writer http.ResponseWriter, name string, value
 		SameSite: sc.CookieOptions.SameSite,
 	}
 
+	for _, modifier := range modifiers {
+		modifier(cookie)
+	}
+
 	http.SetCookie(writer, cookie)
 
 	return nil
+}
+
+func (sc *SignedCookie) RemoveValues(writer http.ResponseWriter, name string) error {
+	return sc.SetValues(writer, name, nil, removeModifier)
+}
+
+func removeModifier(cookie *http.Cookie) {
+	cookie.MaxAge = -1
 }
 
 func verifySignedMessage(signedMessage, secret string) ([]byte, error) {
