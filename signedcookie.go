@@ -129,6 +129,10 @@ func verifySignedMessage(signedMessage, secret string) ([]byte, error) {
 		return nil, fmt.Errorf("Invalid signed message")
 	}
 
+	for i := range parts {
+		parts[i] = fromFileSafeAlphabet(parts[i])
+	}
+
 	digestType, err := base64.StdEncoding.DecodeString(parts[0])
 	if err != nil {
 		return nil, err
@@ -165,7 +169,10 @@ func signMessage(message []byte, secret string) string {
 	digestType := "HS256"
 
 	protected := base64.StdEncoding.EncodeToString([]byte(digestType))
+	protected = toFileSafeAlphabet(protected)
+
 	payload := base64.StdEncoding.EncodeToString(message)
+	payload = toFileSafeAlphabet(payload)
 
 	text := protected + "." + payload
 
@@ -173,9 +180,24 @@ func signMessage(message []byte, secret string) string {
 	mac.Write([]byte(text))
 	signature := mac.Sum(nil)
 
+	signatureEncoded := base64.StdEncoding.EncodeToString(signature)
+	signatureEncoded = toFileSafeAlphabet(signatureEncoded)
+
 	return fmt.Sprintf("%s.%s.%s",
 		protected,
 		payload,
-		base64.StdEncoding.EncodeToString(signature),
+		signatureEncoded,
 	)
+}
+
+func toFileSafeAlphabet(str string) string {
+	str = strings.ReplaceAll(str, "+", "-")
+	str = strings.ReplaceAll(str, "/", "_")
+	return str
+}
+
+func fromFileSafeAlphabet(str string) string {
+	str = strings.ReplaceAll(str, "-", "+")
+	str = strings.ReplaceAll(str, "_", "/")
+	return str
 }
