@@ -129,6 +129,8 @@ func verifySignedMessage(signedMessage, secret string) ([]byte, error) {
 		return nil, fmt.Errorf("Invalid signed message")
 	}
 
+	text := parts[0] + "." + parts[1]
+
 	for i := range parts {
 		parts[i] = fromFileSafeAlphabet(parts[i])
 	}
@@ -153,8 +155,6 @@ func verifySignedMessage(signedMessage, secret string) ([]byte, error) {
 		return nil, fmt.Errorf("Unsupported digest type: %s", digestStr)
 	}
 
-	text := parts[0] + "." + parts[1]
-
 	challenge := hmac.New(sha256.New, []byte(secret))
 	challenge.Write([]byte(text))
 
@@ -162,7 +162,7 @@ func verifySignedMessage(signedMessage, secret string) ([]byte, error) {
 		return nil, fmt.Errorf("Invalid signature")
 	}
 
-	return payload, nil
+	return []byte(fromFileSafeAlphabet(string(payload))), nil
 }
 
 func signMessage(message []byte, secret string) string {
@@ -172,7 +172,7 @@ func signMessage(message []byte, secret string) string {
 	protected = toFileSafeAlphabet(protected)
 
 	payload := base64.StdEncoding.EncodeToString(message)
-	payload = toFileSafeAlphabet(payload)
+	payload = toFileSafeAlphabet(payload) // TODO: this is probably not necessary
 
 	text := protected + "." + payload
 
@@ -180,13 +180,13 @@ func signMessage(message []byte, secret string) string {
 	mac.Write([]byte(text))
 	signature := mac.Sum(nil)
 
-	signatureEncoded := base64.StdEncoding.EncodeToString(signature)
-	signatureEncoded = toFileSafeAlphabet(signatureEncoded)
+	signatureStr := base64.StdEncoding.EncodeToString(signature)
+	signatureStr = toFileSafeAlphabet(signatureStr)
 
 	return fmt.Sprintf("%s.%s.%s",
 		protected,
 		payload,
-		signatureEncoded,
+		signatureStr,
 	)
 }
 
